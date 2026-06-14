@@ -27,8 +27,9 @@ export async function updateCoordinates(lat: number, lng: number): Promise<void>
   await api.put("/merchant/profile/coordinates", { lat, lng });
 }
 
-export async function skipStep(step: string): Promise<void> {
-  await api.post(`/merchant/profile/progress/skip`, { step });
+export async function skipStep(step: string): Promise<ProfileProgress> {
+  const res = await api.post<{ success: boolean; data: ProfileProgress }>(`/merchant/profile/progress/skip`, { step });
+  return res.data.data!;
 }
 
 export async function getProgress(): Promise<ProfileProgress> {

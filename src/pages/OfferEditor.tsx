@@ -13,87 +13,26 @@ interface OfferTypeDef {
   emoji: string;
   label: string;
   description: string;
-  extraFields: string[];
 }
 
 const OFFER_TYPES: OfferTypeDef[] = [
-  {
-    type: "percentage_discount",
-    emoji: "🏷️",
-    label: "Percentage Discount",
-    description: "e.g. 20% off your total bill",
-    extraFields: ["discountValue"],
-  },
-  {
-    type: "fixed_amount_discount",
-    emoji: "💰",
-    label: "Fixed Amount Off",
-    description: "e.g. $10 off any purchase",
-    extraFields: ["discountValue"],
-  },
-  {
-    type: "buy_x_get_y",
-    emoji: "🛒",
-    label: "Buy X Get Y",
-    description: "e.g. Buy 2 get 1 free",
-    extraFields: ["buyQuantity", "getQuantity"],
-  },
-  {
-    type: "happy_hour",
-    emoji: "⏰",
-    label: "Happy Hour",
-    description: "Time-limited deals on specific days",
-    extraFields: ["happyHourStart", "happyHourEnd", "happyHourDays"],
-  },
-  {
-    type: "bundle_offer",
-    emoji: "📦",
-    label: "Bundle Deal",
-    description: "e.g. Lunch combo for $15",
-    extraFields: ["bundleItems", "bundlePrice"],
-  },
-  {
-    type: "free_item_with_purchase",
-    emoji: "🎁",
-    label: "Free Item with Purchase",
-    description: "e.g. Free dessert with main course",
-    extraFields: ["freeItemDescription"],
-  },
-  {
-    type: "minimum_spend",
-    emoji: "💳",
-    label: "Minimum Spend",
-    description: "e.g. 15% off when you spend $50+",
-    extraFields: ["minimumSpendAmount", "discountValue"],
-  },
-  {
-    type: "member_loyalty",
-    emoji: "⭐",
-    label: "Member Loyalty",
-    description: "Exclusive deal for Perkd members",
-    extraFields: ["loyaltyPointsMultiplier"],
-  },
-  {
-    type: "limited_time",
-    emoji: "🔥",
-    label: "Limited Time Offer",
-    description: "Create urgency with a time-boxed deal",
-    extraFields: ["limitedTimeDescription"],
-  },
-  {
-    type: "category_specific",
-    emoji: "🗂️",
-    label: "Category Specific",
-    description: "e.g. 25% off all appetisers",
-    extraFields: ["categoryName", "discountValue"],
-  },
+  { type: "percentage_discount",   emoji: "🏷️", label: "Percentage Discount",    description: "e.g. 20% off your total bill" },
+  { type: "fixed_amount_discount", emoji: "💰", label: "Fixed Amount Off",        description: "e.g. $10 off any purchase" },
+  { type: "buy_x_get_y",           emoji: "🛒", label: "Buy X Get Y",             description: "e.g. Buy 2 get 1 free" },
+  { type: "happy_hour",            emoji: "⏰", label: "Happy Hour",              description: "Time-limited deals on specific days" },
+  { type: "bundle_offer",          emoji: "📦", label: "Bundle Deal",             description: "e.g. Lunch combo for $15" },
+  { type: "free_item_with_purchase", emoji: "🎁", label: "Free Item with Purchase", description: "e.g. Free dessert with main course" },
+  { type: "minimum_spend",         emoji: "💳", label: "Minimum Spend",           description: "e.g. 15% off when you spend $50+" },
+  { type: "member_loyalty",        emoji: "⭐", label: "Member Loyalty",          description: "Exclusive deal for Perkd members" },
+  { type: "limited_time",          emoji: "🔥", label: "Limited Time Offer",      description: "Create urgency with a time-boxed deal" },
+  { type: "category_specific",     emoji: "🗂️", label: "Category Specific",       description: "e.g. 25% off all appetisers" },
 ];
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function toDateInputValue(isoString?: string): string {
+function toDateInputValue(isoString?: string | null): string {
   if (!isoString) return "";
   return isoString.substring(0, 10);
 }
@@ -110,11 +49,8 @@ const OfferEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState(isEdit);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form state
-  const [form, setForm] = useState<Partial<Offer>>({
-    availableDays: [],
-    happyHourDays: [],
-  });
+  // Form state — field names match the backend Offer model exactly
+  const [form, setForm] = useState<Partial<Offer>>({ availableDays: [] });
 
   useEffect(() => {
     if (isEdit && id) {
@@ -124,7 +60,7 @@ const OfferEditor: React.FC = () => {
           setForm({
             ...offer,
             validFrom: toDateInputValue(offer.validFrom),
-            validTo: toDateInputValue(offer.validTo),
+            validTo:   toDateInputValue(offer.validTo),
           });
         })
         .catch(() => toast.error("Failed to load offer."))
@@ -138,16 +74,16 @@ const OfferEditor: React.FC = () => {
     setEditorStep(2);
   };
 
-  const setField = (key: keyof Offer, value: any) => {
+  const setField = <K extends keyof Offer>(key: K, value: Offer[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  const toggleDay = (day: string, field: "availableDays" | "happyHourDays") => {
+  const toggleDay = (day: string) => {
     setForm((f) => {
-      const current = (f[field] as string[]) ?? [];
+      const current = f.availableDays ?? [];
       return {
         ...f,
-        [field]: current.includes(day)
+        availableDays: current.includes(day)
           ? current.filter((d) => d !== day)
           : [...current, day],
       };
@@ -168,7 +104,12 @@ const OfferEditor: React.FC = () => {
       navigate("/offers");
     } catch (err: any) {
       const data = err?.response?.data;
-      toast.error(data?.message ?? "Failed to save offer.");
+      if (data?.fields) {
+        const fieldMsgs = Object.values(data.fields).join("\n");
+        toast.error(fieldMsgs, { duration: 6000 });
+      } else {
+        toast.error(data?.message ?? "Failed to save offer.");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -179,9 +120,7 @@ const OfferEditor: React.FC = () => {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="page-loading">
-          <Spinner size="lg" />
-        </div>
+        <div className="page-loading"><Spinner size="lg" /></div>
       </DashboardLayout>
     );
   }
@@ -190,11 +129,7 @@ const OfferEditor: React.FC = () => {
     <DashboardLayout>
       <div className="page-header">
         <div>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => navigate("/offers")}
-            style={{ marginBottom: "0.5rem" }}
-          >
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("/offers")} style={{ marginBottom: "0.5rem" }}>
             ← Back to offers
           </button>
           <h1 className="page-title">{isEdit ? "Edit Offer" : "Create New Offer"}</h1>
@@ -227,11 +162,7 @@ const OfferEditor: React.FC = () => {
       {editorStep === 2 && selectedType && typeDef && (
         <div className="offer-form-shell">
           {!isEdit && (
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setEditorStep(1)}
-              style={{ marginBottom: "1.25rem" }}
-            >
+            <button className="btn btn-ghost btn-sm" onClick={() => setEditorStep(1)} style={{ marginBottom: "1.25rem" }}>
               ← Change offer type
             </button>
           )}
@@ -240,13 +171,13 @@ const OfferEditor: React.FC = () => {
             {typeDef.emoji} {typeDef.label}
           </div>
 
+          {/* ── Base details ── */}
           <div className="form-section">
             <h2 className="form-section-title">Offer Details</h2>
 
             <div className="form-group">
               <label className="form-label">
-                Title *{" "}
-                <span className="char-count">{(form.title ?? "").length}/80</span>
+                Title * <span className="char-count">{(form.title ?? "").length}/80</span>
               </label>
               <input
                 className="form-input"
@@ -259,8 +190,7 @@ const OfferEditor: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label">
-                Short Description *{" "}
-                <span className="char-count">{(form.shortDescription ?? "").length}/200</span>
+                Short Description * <span className="char-count">{(form.shortDescription ?? "").length}/200</span>
               </label>
               <textarea
                 className="form-textarea"
@@ -275,67 +205,60 @@ const OfferEditor: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Valid From *</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={form.validFrom ?? ""}
-                  onChange={(e) => setField("validFrom", e.target.value)}
-                />
+                <input type="date" className="form-input" value={form.validFrom ?? ""} onChange={(e) => setField("validFrom", e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Valid To *</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={form.validTo ?? ""}
-                  onChange={(e) => setField("validTo", e.target.value)}
-                />
+                <input type="date" className="form-input" value={form.validTo ?? ""} onChange={(e) => setField("validTo", e.target.value)} />
               </div>
             </div>
           </div>
 
-          {/* ── Conditional fields by type ── */}
+          {/* ── Type-specific fields — names match backend model exactly ── */}
           <div className="form-section">
             <h2 className="form-section-title">Offer Specifics</h2>
 
-            {(selectedType === "percentage_discount" ||
-              selectedType === "fixed_amount_discount" ||
-              selectedType === "minimum_spend" ||
-              selectedType === "category_specific") && (
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Discount Value *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="form-input"
-                    value={form.discountValue ?? ""}
-                    onChange={(e) => setField("discountValue", parseFloat(e.target.value))}
-                    placeholder={selectedType === "percentage_discount" ? "20" : "10"}
-                  />
-                </div>
-                {selectedType === "percentage_discount" ? (
-                  <div className="form-group">
-                    <label className="form-label">Unit</label>
-                    <select
-                      className="form-select"
-                      value={form.discountUnit ?? "percent"}
-                      onChange={(e) => setField("discountUnit", e.target.value)}
-                    >
-                      <option value="percent">%</option>
-                      <option value="dollars">$</option>
-                    </select>
-                  </div>
-                ) : null}
+            {/* percentage_discount */}
+            {selectedType === "percentage_discount" && (
+              <div className="form-group">
+                <label className="form-label">Discount Percentage (%) *</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max="100"
+                  className="form-input"
+                  value={form.discountPercentage ?? ""}
+                  onChange={(e) => setField("discountPercentage", parseFloat(e.target.value))}
+                  placeholder="20"
+                />
               </div>
             )}
 
+            {/* fixed_amount_discount */}
+            {selectedType === "fixed_amount_discount" && (
+              <div className="form-group">
+                <label className="form-label">Discount Amount ($) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="form-input"
+                  value={form.discountAmount ?? ""}
+                  onChange={(e) => setField("discountAmount", parseFloat(e.target.value))}
+                  placeholder="10.00"
+                />
+              </div>
+            )}
+
+            {/* buy_x_get_y */}
             {selectedType === "buy_x_get_y" && (
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Buy Quantity *</label>
                   <input
                     type="number"
+                    min="1"
                     className="form-input"
                     value={form.buyQuantity ?? ""}
                     onChange={(e) => setField("buyQuantity", parseInt(e.target.value))}
@@ -343,18 +266,20 @@ const OfferEditor: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Get Quantity *</label>
+                  <label className="form-label">Free Quantity *</label>
                   <input
                     type="number"
+                    min="1"
                     className="form-input"
-                    value={form.getQuantity ?? ""}
-                    onChange={(e) => setField("getQuantity", parseInt(e.target.value))}
+                    value={form.freeQuantity ?? ""}
+                    onChange={(e) => setField("freeQuantity", parseInt(e.target.value))}
                     placeholder="1"
                   />
                 </div>
               </div>
             )}
 
+            {/* happy_hour */}
             {selectedType === "happy_hour" && (
               <>
                 <div className="form-row">
@@ -363,8 +288,8 @@ const OfferEditor: React.FC = () => {
                     <input
                       type="time"
                       className="form-input"
-                      value={form.happyHourStart ?? ""}
-                      onChange={(e) => setField("happyHourStart", e.target.value)}
+                      value={form.availableTimeFrom ?? ""}
+                      onChange={(e) => setField("availableTimeFrom", e.target.value)}
                     />
                   </div>
                   <div className="form-group">
@@ -372,20 +297,20 @@ const OfferEditor: React.FC = () => {
                     <input
                       type="time"
                       className="form-input"
-                      value={form.happyHourEnd ?? ""}
-                      onChange={(e) => setField("happyHourEnd", e.target.value)}
+                      value={form.availableTimeTo ?? ""}
+                      onChange={(e) => setField("availableTimeTo", e.target.value)}
                     />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Available Days</label>
+                  <label className="form-label">Available Days (leave empty for all week)</label>
                   <div className="days-checkboxes">
                     {DAYS_OF_WEEK.map((day) => (
                       <label key={day} className="day-checkbox">
                         <input
                           type="checkbox"
-                          checked={(form.happyHourDays ?? []).includes(day)}
-                          onChange={() => toggleDay(day, "happyHourDays")}
+                          checked={(form.availableDays ?? []).includes(day)}
+                          onChange={() => toggleDay(day)}
                         />
                         {day.substring(0, 3)}
                       </label>
@@ -395,91 +320,99 @@ const OfferEditor: React.FC = () => {
               </>
             )}
 
+            {/* bundle_offer */}
             {selectedType === "bundle_offer" && (
+              <div className="form-group">
+                <label className="form-label">Bundle Description *</label>
+                <input
+                  className="form-input"
+                  value={form.bundleDetails ?? ""}
+                  onChange={(e) => setField("bundleDetails", e.target.value)}
+                  placeholder="e.g. Main + Side + Drink for $15"
+                />
+                <p className="form-hint">Describe exactly what's in the bundle and the bundle price.</p>
+              </div>
+            )}
+
+            {/* free_item_with_purchase */}
+            {selectedType === "free_item_with_purchase" && (
               <>
                 <div className="form-group">
-                  <label className="form-label">Bundle Items Description *</label>
+                  <label className="form-label">Free Item Description *</label>
                   <input
                     className="form-input"
-                    value={form.bundleItems ?? ""}
-                    onChange={(e) => setField("bundleItems", e.target.value)}
-                    placeholder="e.g. Main + Side + Drink"
+                    value={form.freeItemDetails ?? ""}
+                    onChange={(e) => setField("freeItemDetails", e.target.value)}
+                    placeholder="e.g. Free slice of cheesecake"
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Bundle Price ($) *</label>
+                  <label className="form-label">Minimum Spend to Qualify ($) *</label>
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     className="form-input"
-                    value={form.bundlePrice ?? ""}
-                    onChange={(e) => setField("bundlePrice", parseFloat(e.target.value))}
-                    placeholder="15.00"
+                    value={form.minimumSpend ?? ""}
+                    onChange={(e) => setField("minimumSpend", parseFloat(e.target.value))}
+                    placeholder="30.00"
                   />
                 </div>
               </>
             )}
 
-            {selectedType === "free_item_with_purchase" && (
-              <div className="form-group">
-                <label className="form-label">Free Item Description *</label>
-                <input
-                  className="form-input"
-                  value={form.freeItemDescription ?? ""}
-                  onChange={(e) => setField("freeItemDescription", e.target.value)}
-                  placeholder="e.g. Free slice of cheesecake"
-                />
-              </div>
-            )}
-
+            {/* minimum_spend */}
             {selectedType === "minimum_spend" && (
               <div className="form-group">
                 <label className="form-label">Minimum Spend Amount ($) *</label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   className="form-input"
-                  value={form.minimumSpendAmount ?? ""}
-                  onChange={(e) => setField("minimumSpendAmount", parseFloat(e.target.value))}
+                  value={form.minimumSpend ?? ""}
+                  onChange={(e) => setField("minimumSpend", parseFloat(e.target.value))}
                   placeholder="50.00"
                 />
               </div>
             )}
 
+            {/* member_loyalty — eligibleItem describes the reward/tier */}
             {selectedType === "member_loyalty" && (
               <div className="form-group">
-                <label className="form-label">Loyalty Points Multiplier</label>
+                <label className="form-label">Eligible Reward / Item *</label>
                 <input
-                  type="number"
-                  step="0.5"
                   className="form-input"
-                  value={form.loyaltyPointsMultiplier ?? ""}
-                  onChange={(e) => setField("loyaltyPointsMultiplier", parseFloat(e.target.value))}
-                  placeholder="2"
+                  value={form.eligibleItem ?? ""}
+                  onChange={(e) => setField("eligibleItem", e.target.value)}
+                  placeholder="e.g. Double points on all drinks"
                 />
+                <p className="form-hint">Describe what Perkd members receive.</p>
               </div>
             )}
 
+            {/* limited_time — no extra required fields; use terms for context */}
             {selectedType === "limited_time" && (
               <div className="form-group">
-                <label className="form-label">What makes this time-limited? *</label>
+                <label className="form-label">What makes this time-limited?</label>
                 <textarea
                   className="form-textarea"
                   rows={3}
-                  value={form.limitedTimeDescription ?? ""}
-                  onChange={(e) => setField("limitedTimeDescription", e.target.value)}
+                  value={form.termsAndConditions ?? ""}
+                  onChange={(e) => setField("termsAndConditions", e.target.value)}
                   placeholder="e.g. Summer special running through August only..."
                 />
               </div>
             )}
 
+            {/* category_specific — eligibleItem holds the category name */}
             {selectedType === "category_specific" && (
               <div className="form-group">
                 <label className="form-label">Category Name *</label>
                 <input
                   className="form-input"
-                  value={form.categoryName ?? ""}
-                  onChange={(e) => setField("categoryName", e.target.value)}
+                  value={form.eligibleItem ?? ""}
+                  onChange={(e) => setField("eligibleItem", e.target.value)}
                   placeholder="e.g. Appetisers, Desserts, Beverages"
                 />
               </div>
@@ -490,33 +423,38 @@ const OfferEditor: React.FC = () => {
           <div className="form-section">
             <h2 className="form-section-title">Terms & Availability</h2>
 
-            <div className="form-group">
-              <label className="form-label">Available Days</label>
-              <div className="days-checkboxes">
-                {DAYS_OF_WEEK.map((day) => (
-                  <label key={day} className="day-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={(form.availableDays ?? []).includes(day)}
-                      onChange={() => toggleDay(day, "availableDays")}
-                    />
-                    {day.substring(0, 3)}
-                  </label>
-                ))}
+            {/* General available days (not happy_hour — that already has it above) */}
+            {selectedType !== "happy_hour" && (
+              <div className="form-group">
+                <label className="form-label">Available Days</label>
+                <div className="days-checkboxes">
+                  {DAYS_OF_WEEK.map((day) => (
+                    <label key={day} className="day-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={(form.availableDays ?? []).includes(day)}
+                        onChange={() => toggleDay(day)}
+                      />
+                      {day.substring(0, 3)}
+                    </label>
+                  ))}
+                </div>
+                <p className="form-hint">Leave empty to apply all week.</p>
               </div>
-              <p className="form-hint">Leave empty to apply all week.</p>
-            </div>
+            )}
 
-            <div className="form-group">
-              <label className="form-label">Terms & Conditions</label>
-              <textarea
-                className="form-textarea"
-                rows={3}
-                value={form.terms ?? ""}
-                onChange={(e) => setField("terms", e.target.value)}
-                placeholder="e.g. One per customer. Cannot be combined with other offers."
-              />
-            </div>
+            {selectedType !== "limited_time" && (
+              <div className="form-group">
+                <label className="form-label">Terms & Conditions</label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  value={form.termsAndConditions ?? ""}
+                  onChange={(e) => setField("termsAndConditions", e.target.value)}
+                  placeholder="e.g. One per customer. Cannot be combined with other offers."
+                />
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Exclusions</label>
@@ -530,32 +468,25 @@ const OfferEditor: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Offer Image URL (optional)</label>
+              <label className="form-label">Redemption Limit (optional)</label>
               <input
+                type="number"
+                min="1"
                 className="form-input"
-                value={form.imageUrl ?? ""}
-                onChange={(e) => setField("imageUrl", e.target.value)}
-                placeholder="https://..."
+                value={form.redemptionLimit ?? ""}
+                onChange={(e) => setField("redemptionLimit", parseInt(e.target.value))}
+                placeholder="e.g. 100"
               />
+              <p className="form-hint">Maximum number of times this offer can be redeemed. Leave blank for unlimited.</p>
             </div>
           </div>
 
           {/* Save buttons */}
           <div className="offer-form-actions">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => handleSave(false)}
-              disabled={isSaving}
-            >
+            <button type="button" className="btn btn-outline" onClick={() => handleSave(false)} disabled={isSaving}>
               {isSaving ? <Spinner size="sm" /> : "Save as Draft"}
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => handleSave(true)}
-              disabled={isSaving}
-            >
+            <button type="button" className="btn btn-primary" onClick={() => handleSave(true)} disabled={isSaving}>
               {isSaving ? <Spinner size="sm" /> : "Save & Activate"}
             </button>
           </div>

@@ -35,8 +35,8 @@ export interface MerchantBusiness {
 }
 
 export interface ProfileProgressStep {
-  completed: boolean;
-  skipped: boolean;
+  status: "not_started" | "completed" | "skipped";
+  updatedAt?: string | null;
 }
 
 export interface ProfileProgress {
@@ -72,24 +72,21 @@ export interface Offer {
   status: OfferStatus;
   validFrom: string;
   validTo: string;
-  discountValue?: number;
-  discountUnit?: "percent" | "dollars";
-  buyQuantity?: number;
-  getQuantity?: number;
-  happyHourStart?: string;
-  happyHourEnd?: string;
-  happyHourDays?: string[];
-  bundleItems?: string;
-  bundlePrice?: number;
-  freeItemDescription?: string;
-  minimumSpendAmount?: number;
-  loyaltyPointsMultiplier?: number;
-  limitedTimeDescription?: string;
-  categoryName?: string;
-  terms?: string;
-  exclusions?: string;
+  // Type-specific fields — match backend Offer model exactly
+  discountPercentage?: number | null;
+  discountAmount?: number | null;
+  buyQuantity?: number | null;
+  freeQuantity?: number | null;
+  availableTimeFrom?: string | null;
+  availableTimeTo?: string | null;
+  minimumSpend?: number | null;
+  freeItemDetails?: string | null;
+  bundleDetails?: string | null;
+  eligibleItem?: string | null;
   availableDays?: string[];
-  imageUrl?: string;
+  termsAndConditions?: string | null;
+  exclusions?: string | null;
+  redemptionLimit?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }

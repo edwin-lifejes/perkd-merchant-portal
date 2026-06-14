@@ -347,15 +347,22 @@ input,textarea,select{font-family:inherit;font-size:inherit}a{color:inherit;text
   color: var(--muted);
   font-size: 0.8rem;
   text-align: center;
+  background: none; border: none; cursor: pointer; padding: 0;
 }
+.setup-step-indicator:hover { color: var(--sage); }
 .setup-step-indicator.active { color: var(--sage); }
-.setup-step-indicator.done { color: var(--sage); }
+.setup-step-indicator.done { color: var(--sage); opacity: 0.75; }
 .setup-step-icon { font-size: 1.5rem; }
 .setup-step-name { font-size: 0.75rem; font-weight: 600; }
 .setup-step-connector {
   position: absolute; top: 0.75rem; left: calc(50% + 1.5rem); right: calc(-50% + 1.5rem);
   height: 1.5px;
   background: var(--hair);
+}
+.setup-card-title { display: flex; align-items: center; gap: 0.75rem; }
+.setup-step-saved-badge {
+  font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.5rem;
+  background: #d1fae5; color: #065f46; border-radius: 99px; letter-spacing: 0.03em;
 }
 .setup-card {
   background: var(--bg-2);
@@ -364,7 +371,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}a{color:inherit;text
   padding: 2rem;
   box-shadow: var(--card-sh);
 }
-.setup-card-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem; }
+.setup-card-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem; }
 .setup-step-content { margin-bottom: 1.5rem; }
 .setup-step-desc { color: var(--muted); font-size: 0.9375rem; margin-bottom: 1.25rem; line-height: 1.6; }
 .setup-card-actions { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }

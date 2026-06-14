@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import Spinner from "../components/ui/Spinner";
-import { getProgress, updateLogo, updateDescription, updateCoordinates, skipStep } from "../services/merchant";
-import type { ProfileProgress } from "../types";
+import { getProgress, getProfile, updateLogo, updateDescription, updateCoordinates, skipStep } from "../services/merchant";
+import type { ProfileProgress, MerchantBusiness } from "../types";
 
 type SetupStep = "logo" | "description" | "coordinates";
 
@@ -26,10 +26,11 @@ const ProfileSetup: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<SetupStep>("logo");
   const [progress, setProgress] = useState<ProfileProgress | null>(null);
+  const [business, setBusiness] = useState<MerchantBusiness | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Step-specific state
+  // Step-specific state — pre-populated from saved data
   const [logoUrl, setLogoUrl] = useState("");
   const [logoPreviewError, setLogoPreviewError] = useState(false);
   const [description, setDescription] = useState("");
@@ -37,9 +38,20 @@ const ProfileSetup: React.FC = () => {
   const [lng, setLng] = useState("");
 
   useEffect(() => {
-    getProgress()
-      .then((p) => {
+    Promise.all([getProgress(), getProfile()])
+      .then(([p, biz]) => {
         setProgress(p);
+        setBusiness(biz);
+
+        // Pre-populate from existing saved data
+        if (biz.logoUrl) setLogoUrl(biz.logoUrl);
+        if (biz.description) setDescription(biz.description);
+        if (biz.coordinates) {
+          setLat(String(biz.coordinates.lat));
+          setLng(String(biz.coordinates.lng));
+        }
+
+        // Jump to the resume step
         if (p.resumeStep && p.resumeStep !== "complete") {
           setCurrentStep(p.resumeStep as SetupStep);
         }
@@ -49,6 +61,11 @@ const ProfileSetup: React.FC = () => {
   }, []);
 
   const stepIndex = STEPS.indexOf(currentStep);
+
+  const isStepDone = (step: SetupStep) => {
+    const s = progress?.steps[step];
+    return s?.status === "completed" || s?.status === "skipped";
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -80,6 +97,9 @@ const ProfileSetup: React.FC = () => {
         await updateCoordinates(latNum, lngNum);
         toast.success("Coordinates saved!");
       }
+      // Refresh progress after save
+      const updated = await getProgress();
+      setProgress(updated);
       goToNext();
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Failed to save. Please try again.");
@@ -91,7 +111,8 @@ const ProfileSetup: React.FC = () => {
   const handleSkip = async () => {
     setIsSaving(true);
     try {
-      await skipStep(currentStep);
+      const updated = await skipStep(currentStep);
+      setProgress(updated as unknown as ProfileProgress);
       toast("Step skipped — you can complete it later from your profile.", { icon: "ℹ️" });
       goToNext();
     } catch {
@@ -113,9 +134,7 @@ const ProfileSetup: React.FC = () => {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="page-loading">
-          <Spinner size="lg" />
-        </div>
+        <div className="page-loading"><Spinner size="lg" /></div>
       </DashboardLayout>
     );
   }
@@ -133,19 +152,20 @@ const ProfileSetup: React.FC = () => {
         {/* Step indicator */}
         <div className="setup-steps">
           {STEPS.map((s, i) => {
-            const stepDone = progress?.steps[s]?.completed || progress?.steps[s]?.skipped;
+            const done = isStepDone(s);
             const isActive = s === currentStep;
             return (
-              <div
+              <button
                 key={s}
-                className={`setup-step-indicator${isActive ? " active" : stepDone ? " done" : ""}`}
+                className={`setup-step-indicator${isActive ? " active" : done ? " done" : ""}`}
+                onClick={() => setCurrentStep(s)}
               >
                 <span className="setup-step-icon">
-                  {stepDone && !isActive ? "✓" : STEP_ICONS[s]}
+                  {done && !isActive ? "✓" : STEP_ICONS[s]}
                 </span>
                 <span className="setup-step-name">{STEP_LABELS[s]}</span>
                 {i < STEPS.length - 1 && <span className="setup-step-connector" />}
-              </div>
+              </button>
             );
           })}
         </div>
@@ -154,6 +174,9 @@ const ProfileSetup: React.FC = () => {
         <div className="setup-card">
           <h2 className="setup-card-title">
             {STEP_ICONS[currentStep]} {STEP_LABELS[currentStep]}
+            {isStepDone(currentStep) && (
+              <span className="setup-step-saved-badge">Saved</span>
+            )}
           </h2>
 
           {currentStep === "logo" && (
@@ -176,11 +199,7 @@ const ProfileSetup: React.FC = () => {
               </div>
               {logoUrl && !logoPreviewError && (
                 <div className="logo-preview">
-                  <img
-                    src={logoUrl}
-                    alt="Logo preview"
-                    onError={() => setLogoPreviewError(true)}
-                  />
+                  <img src={logoUrl} alt="Logo preview" onError={() => setLogoPreviewError(true)} />
                 </div>
               )}
               {logoPreviewError && (
@@ -188,24 +207,19 @@ const ProfileSetup: React.FC = () => {
                   ⚠️ Could not load image from this URL. Please check the link.
                 </p>
               )}
-              <p className="form-hint">
-                Recommended: square image, at least 400×400px, PNG or JPG.
-              </p>
+              <p className="form-hint">Recommended: square image, at least 400×400px, PNG or JPG.</p>
             </div>
           )}
 
           {currentStep === "description" && (
             <div className="setup-step-content">
               <p className="setup-step-desc">
-                Tell customers what makes your business special. Keep it concise and
-                compelling.
+                Tell customers what makes your business special. Keep it concise and compelling.
               </p>
               <div className="form-group">
                 <label className="form-label">
                   Business Description{" "}
-                  <span className="char-count">
-                    {description.length}/300
-                  </span>
+                  <span className="char-count">{description.length}/300</span>
                 </label>
                 <textarea
                   className="form-textarea"
@@ -217,8 +231,7 @@ const ProfileSetup: React.FC = () => {
                 />
               </div>
               <p className="form-hint">
-                ⚠️ Businesses without a description are 60% less likely to be
-                clicked by members.
+                ⚠️ Businesses without a description are 60% less likely to be clicked by members.
               </p>
             </div>
           )}
@@ -254,38 +267,31 @@ const ProfileSetup: React.FC = () => {
               </div>
               <p className="form-hint">
                 💡 Find your coordinates at{" "}
-                <a
-                  href="https://www.latlong.net/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link"
-                >
+                <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="link">
                   latlong.net
                 </a>{" "}
                 or by right-clicking your location on Google Maps.
               </p>
               <p className="form-hint form-hint-warning">
-                ⚠️ Without coordinates, your business won't appear in location-based
-                searches.
+                ⚠️ Without coordinates, your business won't appear in location-based searches.
               </p>
             </div>
           )}
 
           <div className="setup-card-actions">
-            <button
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? <Spinner size="sm" /> : "Save & Continue"}
+            <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? <Spinner size="sm" /> : isStepDone(currentStep) ? "Update & Continue" : "Save & Continue"}
             </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={handleSkip}
-              disabled={isSaving}
-            >
-              Skip for now
-            </button>
+            {!isStepDone(currentStep) && (
+              <button className="btn btn-ghost btn-sm" onClick={handleSkip} disabled={isSaving}>
+                Skip for now
+              </button>
+            )}
+            {isStepDone(currentStep) && stepIndex < STEPS.length - 1 && (
+              <button className="btn btn-ghost btn-sm" onClick={goToNext} disabled={isSaving}>
+                Next step →
+              </button>
+            )}
           </div>
         </div>
       </div>
