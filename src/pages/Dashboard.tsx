@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
 
   const profileIncomplete = profileProgress?.overallStatus !== "complete";
   const completedSteps = Object.values(profileProgress?.steps ?? {}).filter(
-    (s) => s.completed || s.skipped
+    (s) => s.status === "completed" || s.status === "skipped"
   ).length;
   const totalSteps = 3;
   const progressPct = Math.round((completedSteps / totalSteps) * 100);
