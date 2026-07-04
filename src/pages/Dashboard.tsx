@@ -4,6 +4,7 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import Alert from "../components/ui/Alert";
 import Badge from "../components/ui/Badge";
 import Spinner from "../components/ui/Spinner";
+import Icon from "../components/ui/Icon";
 import { getDashboard } from "../services/merchant";
 import type { DashboardData } from "../types";
 
@@ -61,7 +62,7 @@ const Dashboard: React.FC = () => {
 
   const profileIncomplete = profileProgress?.overallStatus !== "complete";
   const completedSteps = Object.values(profileProgress?.steps ?? {}).filter(
-    (s) => s.completed || s.skipped
+    (s) => s.status === "completed" || s.status === "skipped"
   ).length;
   const totalSteps = 3;
   const progressPct = Math.round((completedSteps / totalSteps) * 100);
@@ -71,7 +72,7 @@ const Dashboard: React.FC = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            {getGreeting()}, {business?.tradingName ?? "Partner"} 👋
+            {getGreeting()}, {business?.tradingName ?? "Partner"}
           </h1>
           <p className="page-subtitle">{formatDate(new Date())}</p>
         </div>
@@ -85,7 +86,7 @@ const Dashboard: React.FC = () => {
         <Alert
           type="warning"
           message={`Action required: ${sharedAdminNotes}`}
-          icon="📋"
+          icon="assignment"
         />
       )}
 
@@ -136,13 +137,13 @@ const Dashboard: React.FC = () => {
         <div className="section-card-header">
           <h2 className="section-card-title">Latest Offers</h2>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate("/offers")}>
-            View all →
+            View all
           </button>
         </div>
 
         {!latestOffers || latestOffers.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon">🏷️</span>
+            <span className="empty-icon"><Icon name="local_offer" size={48} style={{ color: "var(--muted-2)" }} /></span>
             <h3>No offers yet</h3>
             <p>Create your first offer to start reaching Perkd members.</p>
             <button
@@ -162,7 +163,7 @@ const Dashboard: React.FC = () => {
                     {offer.validFrom
                       ? new Date(offer.validFrom).toLocaleDateString("en-CA")
                       : "—"}{" "}
-                    →{" "}
+                    <Icon name="arrow_forward" size={12} style={{ verticalAlign: "middle", margin: "0 2px" }} />{" "}
                     {offer.validTo
                       ? new Date(offer.validTo).toLocaleDateString("en-CA")
                       : "—"}

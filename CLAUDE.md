@@ -4,6 +4,49 @@
 
 ---
 
+## CRITICAL: Environment & Deployment Rules
+
+> **These rules exist because a localhost URL was once baked into a production build, breaking login for all users. Follow them without exception.**
+
+### Environment files — what goes where
+
+| File | Committed? | Purpose |
+|---|---|---|
+| `.env.example` | YES | Template only — must contain no real values, only `http://localhost:3233` placeholder |
+| `.env` | NO (gitignored) | Local dev — copy of `.env.example`, never commit |
+| `.env.local` | NO (gitignored) | Local overrides — never commit |
+| `.env.production` | YES | Production values — `VITE_API_URL=https://techjesinovation.com` |
+
+**Rule: Never put `localhost` or `127.0.0.1` in any file that is committed to git.**
+
+A pre-commit hook enforces this. It will block any commit that stages `.env`, `.env.local`, or any env file containing `localhost`.
+
+### Vite build env priority (highest → lowest)
+
+1. `.env.local` — **loaded even by `vite build`** — if this file exists it overrides `.env.production`
+2. `.env.production` — correct source of truth for prod builds
+3. `.env` — base fallback
+
+**Before running `npm run build` for production, delete or rename `.env.local`.**  
+Use `.env.production` as the sole source of production config.
+
+---
+
+## Pre-deployment Checklist
+
+Run through this checklist every time before deploying to `https://lifejes.com/`:
+
+- [ ] **No `.env.local` present** — delete it before building: `rm -f .env.local`
+- [ ] **`.env.production` exists and points to `https://techjesinovation.com`** — `cat .env.production`
+- [ ] **Build is clean** — `npm run build` completes with zero TypeScript errors
+- [ ] **Bundle does not contain localhost** — `grep -r 'localhost' dist/` should return nothing
+- [ ] **All changes committed** — `git status` shows a clean working tree (except gitignored files)
+- [ ] **PR reviewed and merged** before deploying (do not deploy uncommitted changes)
+- [ ] **Deploy with rsync** — `rsync -avz --delete dist/ root@138.197.149.94:/var/www/lifejes_react/`
+- [ ] **Smoke test after deploy** — open `https://lifejes.com/`, log in, verify no 500 errors in Network tab
+
+---
+
 ## What This Is
 
 The **Perkd Merchant Portal** is a React single-page application (SPA) that lets business owners (merchants) manage their presence on the Perkd platform. Merchants use it to:

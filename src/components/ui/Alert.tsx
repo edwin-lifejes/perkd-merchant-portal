@@ -1,4 +1,5 @@
 import React from "react";
+import Icon from "./Icon";
 
 interface AlertProps {
   type: "success" | "error" | "warning" | "info";
@@ -6,18 +7,20 @@ interface AlertProps {
   icon?: string;
 }
 
-const ICONS: Record<string, string> = {
-  success: "✅",
-  error: "❌",
-  warning: "⚠️",
-  info: "ℹ️",
+const TYPE_ICONS: Record<string, string> = {
+  success: "check_circle",
+  error:   "error",
+  warning: "warning",
+  info:    "info",
 };
 
 const Alert: React.FC<AlertProps> = ({ type, message, icon }) => {
-  const emoji = icon ?? ICONS[type] ?? "";
+  const iconName = icon ?? TYPE_ICONS[type] ?? "info";
   return (
     <div className={`alert alert-${type}`}>
-      {emoji && <span className="alert-icon">{emoji}</span>}
+      <span className="alert-icon">
+        <Icon name={iconName} size={18} />
+      </span>
       <span>{message}</span>
     </div>
   );

@@ -1,17 +1,18 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AppNav from "./AppNav";
+import Icon from "../ui/Icon";
 
 interface NavItem {
   path: string;
   label: string;
-  emoji: string;
+  icon: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: "/dashboard", label: "Dashboard", emoji: "🏠" },
-  { path: "/offers", label: "My Offers", emoji: "🏷️" },
-  { path: "/profile/setup", label: "Profile", emoji: "✏️" },
+  { path: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { path: "/offers",    label: "My Offers",  icon: "local_offer" },
+  { path: "/profile/setup", label: "Profile", icon: "manage_accounts" },
 ];
 
 interface DashboardLayoutProps {
@@ -37,7 +38,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, tradingName
                   className={`sidebar-nav-item${isActive ? " active" : ""}`}
                   onClick={() => navigate(item.path)}
                 >
-                  <span className="sidebar-nav-emoji">{item.emoji}</span>
+                  <Icon name={item.icon} size={20} filled={isActive} className="sidebar-nav-icon" />
                   <span className="sidebar-nav-label">{item.label}</span>
                 </button>
               );

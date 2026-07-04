@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import Spinner from "../components/ui/Spinner";
 import { getProgress, getProfile, updateLogo, updateDescription, updateCoordinates, skipStep } from "../services/merchant";
-import type { ProfileProgress, MerchantBusiness } from "../types";
+import type { ProfileProgress } from "../types";
 
 type SetupStep = "logo" | "description" | "coordinates";
 
@@ -26,7 +26,6 @@ const ProfileSetup: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<SetupStep>("logo");
   const [progress, setProgress] = useState<ProfileProgress | null>(null);
-  const [business, setBusiness] = useState<MerchantBusiness | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,7 +40,6 @@ const ProfileSetup: React.FC = () => {
     Promise.all([getProgress(), getProfile()])
       .then(([p, biz]) => {
         setProgress(p);
-        setBusiness(biz);
 
         // Pre-populate from existing saved data
         if (biz.logoUrl) setLogoUrl(biz.logoUrl);

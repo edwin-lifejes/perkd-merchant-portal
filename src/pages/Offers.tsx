@@ -4,20 +4,21 @@ import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import Badge from "../components/ui/Badge";
 import Spinner from "../components/ui/Spinner";
+import Icon from "../components/ui/Icon";
 import { listOffers, activateOffer, pauseOffer, deleteOffer } from "../services/offers";
 import type { Offer } from "../types";
 
-const OFFER_TYPE_EMOJI: Record<string, string> = {
-  percentage_discount: "🏷️",
-  fixed_amount_discount: "💰",
-  buy_x_get_y: "🛒",
-  happy_hour: "⏰",
-  bundle_offer: "📦",
-  free_item_with_purchase: "🎁",
-  minimum_spend: "💳",
-  member_loyalty: "⭐",
-  limited_time: "🔥",
-  category_specific: "🗂️",
+const OFFER_TYPE_ICON: Record<string, string> = {
+  percentage_discount:     "percent",
+  fixed_amount_discount:   "payments",
+  buy_x_get_y:             "shopping_cart",
+  happy_hour:              "schedule",
+  bundle_offer:            "inventory_2",
+  free_item_with_purchase: "redeem",
+  minimum_spend:           "credit_card",
+  member_loyalty:          "star",
+  limited_time:            "local_fire_department",
+  category_specific:       "category",
 };
 
 const TABS: Array<{ label: string; value: string }> = [
@@ -116,7 +117,7 @@ const Offers: React.FC = () => {
         </div>
       ) : offers.length === 0 ? (
         <div className="empty-state">
-          <span className="empty-icon">🏷️</span>
+          <span className="empty-icon"><Icon name="local_offer" size={48} style={{ color: "var(--muted-2)" }} /></span>
           <h3>No offers here</h3>
           <p>
             {activeTab
@@ -132,8 +133,8 @@ const Offers: React.FC = () => {
           {offers.map((offer) => (
             <div key={offer._id} className="offer-card">
               <div className="offer-card-main">
-                <span className="offer-type-chip">
-                  {OFFER_TYPE_EMOJI[offer.offerType] ?? "🏷️"}{" "}
+                <span className="offer-type-chip" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <Icon name={OFFER_TYPE_ICON[offer.offerType] ?? "local_offer"} size={13} />
                   {offer.offerType.replace(/_/g, " ")}
                 </span>
                 <h3 className="offer-card-title">{offer.title}</h3>
@@ -142,7 +143,7 @@ const Offers: React.FC = () => {
                   {offer.validFrom
                     ? new Date(offer.validFrom).toLocaleDateString("en-CA")
                     : "—"}{" "}
-                  →{" "}
+                  <Icon name="arrow_forward" size={12} style={{ verticalAlign: "middle", margin: "0 2px" }} />{" "}
                   {offer.validTo
                     ? new Date(offer.validTo).toLocaleDateString("en-CA")
                     : "—"}
