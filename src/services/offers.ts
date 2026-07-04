@@ -3,7 +3,7 @@ import type { Offer, OfferTemplate } from "../types";
 
 export async function getOfferTemplates(): Promise<OfferTemplate[]> {
   const res = await api.get<{ success: boolean; data: OfferTemplate[] }>(
-    "/merchant/offers/templates"
+    "/merchant/offer-templates"
   );
   return res.data.data ?? [];
 }

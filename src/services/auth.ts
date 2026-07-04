@@ -64,7 +64,7 @@ export async function saveDraft(
   const url = id
     ? `${BASE_URL}/merchant/register/draft/${id}`
     : `${BASE_URL}/merchant/register/draft`;
-  const method = id ? "put" : "post";
+  const method = "put";
   const res = await axios[method]<{ success: boolean; data: { id: string } }>(url, data);
   return res.data.data!;
 }
