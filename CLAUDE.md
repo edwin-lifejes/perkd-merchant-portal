@@ -4,6 +4,85 @@
 
 ---
 
+## Project State — Read This First
+
+> This section is for any developer or AI agent picking up this project. It describes what has been built, what is pending, and where the live system runs.
+
+### What has been built and is live
+
+| Feature | File(s) |
+|---|---|
+| Public landing page | `src/pages/Landing.tsx` |
+| Merchant registration wizard (multi-step, draft save/load) | `src/pages/Register.tsx` |
+| Login / logout (Keycloak ROPC via `/auth-config`) | `src/pages/Login.tsx`, `src/services/auth.ts` |
+| Dashboard (offer counts, latest offers, profile progress banner) | `src/pages/Dashboard.tsx` |
+| Profile setup (logo URL, description, lat/lng coordinates) | `src/pages/ProfileSetup.tsx` |
+| Offer list with status filter tabs | `src/pages/Offers.tsx` |
+| Offer editor — type picker (Step 1) + detail form (Step 2) | `src/pages/OfferEditor.tsx` |
+| Offer editor — theme panel + live preview tile | `src/pages/OfferEditor.tsx` |
+| Per-offer contact override (contactEmail / contactPhone) | `src/pages/OfferEditor.tsx`, `src/types/index.ts` |
+| Material Symbols icon system (replaces all emoji) | `src/components/ui/Icon.tsx`, `index.html` |
+| `hasAdvancedContent()` helper for future consumer tile | `src/utils/offers.ts` |
+
+### What is NOT built yet
+
+| Item | Notes |
+|---|---|
+| Image file upload | `logoUrl`/`coverPhotoUrl` are plain URL text inputs. Backend has `/generate-upload-url` but it is not wired to the UI. |
+| Consumer-facing offer browse / tile | Data model is ready (`businessName`, `hasAdvancedContent`). UI not designed yet. |
+| Admin portal | Separate product. Backend admin routes exist. No frontend. |
+| Map picker for coordinates | `ProfileSetup` uses plain lat/lng text inputs. |
+| Resubmit application flow | Backend has `PUT /merchant/application` but there is no UI for it. |
+| Test suite | No test framework configured. |
+
+### Known technical debt
+
+- `Register.tsx` uses react-hook-form + zod; all other forms use controlled `useState`. The two patterns coexist.
+- Draft registration ID is kept in component state only — not URL-persisted. A page refresh mid-registration loses the draft link.
+- Token refresh is reactive (on 401), not proactive. Tokens could expire mid-session before the next API call triggers a refresh.
+- Legacy vendor system routes on the backend (`/createStore`, `/updateStore`, `/myStores`, etc.) are dead code waiting to be removed.
+
+---
+
+## Infrastructure
+
+### Live servers
+
+| Role | IP | Domain | SSH |
+|---|---|---|---|
+| Frontend | `138.197.149.94` | `lifejes.com` | `ssh root@138.197.149.94` |
+| Backend + Keycloak | `146.190.116.175` | `techjesinovation.com` | `ssh root@146.190.116.175` |
+
+### Frontend server (`138.197.149.94`)
+- nginx serves static files from `/var/www/lifejes_react/`
+- nginx config: `/etc/nginx/sites-enabled/lifejes`
+- `try_files $uri $uri/ /index.html` enables React client-side routing
+
+### Backend server (`146.190.116.175`)
+- Node.js backend at `/root/lifejes-be-gateway/`, port 3233
+- Managed by PM2 — process name `lifejes-backend`
+- Keycloak runs in Docker, proxied at `https://techjesinovation.com/auth/`
+- Keycloak admin console: `https://techjesinovation.com/auth/admin/` → switch to realm `lifejes`
+
+### Deployment commands
+
+**Frontend (run from this repo's root):**
+```bash
+rm -f .env.local
+npm run build
+rsync -avz --delete dist/ root@138.197.149.94:/var/www/lifejes_react/
+echo "VITE_API_URL=http://localhost:3233" > .env.local
+```
+
+**Backend (SSH into server):**
+```bash
+ssh root@146.190.116.175
+cd /root/lifejes-be-gateway
+git pull && npm install && npm run build && pm2 restart lifejes-backend
+```
+
+---
+
 ## CRITICAL: Environment & Deployment Rules
 
 > **These rules exist because a localhost URL was once baked into a production build, breaking login for all users. Follow them without exception.**
@@ -138,9 +217,13 @@ perkd-merchant-portal/
 │   │   │   ├── AppNav.tsx        # Top navigation bar (brand + business name + sign out)
 │   │   │   └── DashboardLayout.tsx # Wrapper: AppNav + page content area
 │   │   └── ui/
-│   │       ├── Alert.tsx         # Inline alert (info / warning / error)
+│   │       ├── Alert.tsx         # Inline alert (info / warning / error) — uses Icon
 │   │       ├── Badge.tsx         # Offer status badge (active / draft / paused / expired)
+│   │       ├── Icon.tsx          # Google Material Symbols Outlined wrapper component
 │   │       └── Spinner.tsx       # Loading spinner (sm / md / lg sizes)
+│   │
+│   ├── utils/
+│   │   └── offers.ts             # hasAdvancedContent() helper for consumer tile expand affordance
 │   │
 │   └── assets/
 │       └── hero.png              # Hero image used on the Landing page
@@ -220,7 +303,7 @@ All responses follow:
 | DELETE | `/merchant/offers/:id` | Delete offer |
 | POST | `/merchant/offers/:id/activate` | Activate a draft/paused offer |
 | POST | `/merchant/offers/:id/pause` | Pause an active offer |
-| GET | `/merchant/offers/templates` | Returns offer type templates (used for UI hints) |
+| GET | `/merchant/offer-templates` | Returns offer type templates (used for UI hints) |
 
 ### Reference Data
 | Method | Path | Description |
