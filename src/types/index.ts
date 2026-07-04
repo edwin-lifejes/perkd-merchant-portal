@@ -87,6 +87,11 @@ export interface Offer {
   termsAndConditions?: string | null;
   exclusions?: string | null;
   redemptionLimit?: number | null;
+  // Per-offer contact override (null = use merchant business default)
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  // Read-only: populated by API for consumer-facing tiles; never sent on create/update
+  businessName?: string;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -5,7 +5,8 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import Spinner from "../components/ui/Spinner";
 import Icon from "../components/ui/Icon";
 import { getOffer, createOffer, updateOffer } from "../services/offers";
-import type { Offer, OfferType } from "../types";
+import { getProfile } from "../services/merchant";
+import type { Offer, MerchantBusiness, OfferType } from "../types";
 
 // ── Offer type catalogue ──────────────────────────────────────────────────────
 
@@ -72,6 +73,8 @@ const OfferEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState(isEdit);
   const [isSaving, setIsSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [business, setBusiness] = useState<MerchantBusiness | null>(null);
+  const [useContactOverride, setUseContactOverride] = useState(false);
 
   // Theming state
   const [gradientIndex, setGradientIndex] = useState(0);
@@ -80,6 +83,14 @@ const OfferEditor: React.FC = () => {
 
   // Form state — field names match the backend Offer model exactly
   const [form, setForm] = useState<Partial<Offer>>({ availableDays: [] });
+
+  useEffect(() => {
+    getProfile()
+      .then((biz) => {
+        setBusiness(biz);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isEdit && id) {
@@ -91,6 +102,7 @@ const OfferEditor: React.FC = () => {
             validFrom: toDateInputValue(offer.validFrom),
             validTo:   toDateInputValue(offer.validTo),
           });
+          setUseContactOverride(!!(offer.contactEmail || offer.contactPhone));
         })
         .catch(() => toast.error("Failed to load offer."))
         .finally(() => setIsLoading(false));
@@ -105,6 +117,14 @@ const OfferEditor: React.FC = () => {
 
   const setField = <K extends keyof Offer>(key: K, value: Offer[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  const handleContactToggle = (override: boolean) => {
+    setUseContactOverride(override);
+    if (!override) {
+      setField("contactEmail", null);
+      setField("contactPhone", null);
+    }
   };
 
   const toggleDay = (day: string) => {
@@ -481,6 +501,56 @@ const OfferEditor: React.FC = () => {
                         placeholder="e.g. Summer special running through August only..." />
                     </div>
                   )}
+
+                  {/* Contact info */}
+                  <div className="form-group">
+                    <label className="form-label">Contact Info for this Offer</label>
+                    <div className="contact-toggle-row">
+                      <label className="contact-toggle-option">
+                        <input
+                          type="radio"
+                          name="contactMode"
+                          checked={!useContactOverride}
+                          onChange={() => handleContactToggle(false)}
+                        />
+                        <span>
+                          Use business default
+                          {business?.contactEmail && (
+                            <span className="form-hint" style={{ display: "inline", marginLeft: "0.375rem" }}>
+                              ({business.contactEmail})
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      <label className="contact-toggle-option">
+                        <input
+                          type="radio"
+                          name="contactMode"
+                          checked={useContactOverride}
+                          onChange={() => handleContactToggle(true)}
+                        />
+                        Custom for this offer
+                      </label>
+                    </div>
+                    {useContactOverride && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.75rem" }}>
+                        <input
+                          type="email"
+                          className="form-input"
+                          placeholder="contact@example.com"
+                          value={form.contactEmail ?? ""}
+                          onChange={(e) => setField("contactEmail", e.target.value || null)}
+                        />
+                        <input
+                          type="tel"
+                          className="form-input"
+                          placeholder="+1 (555) 000-0000"
+                          value={form.contactPhone ?? ""}
+                          onChange={(e) => setField("contactPhone", e.target.value || null)}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

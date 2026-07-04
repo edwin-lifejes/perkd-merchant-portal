@@ -561,6 +561,10 @@ input,textarea,select{font-family:inherit;font-size:inherit}a{color:inherit;text
 .offer-advanced-toggle:hover { color: var(--ink); }
 .offer-advanced-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--hair); }
 
+.contact-toggle-row { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+.contact-toggle-option { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer; color: var(--ink); }
+.contact-toggle-option input[type="radio"] { accent-color: var(--sage); }
+
 /* Live preview */
 .offer-preview-header {
   display: flex; align-items: center; justify-content: space-between;
